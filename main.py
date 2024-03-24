@@ -66,7 +66,7 @@ def mutate(child):
                             child = swap_string(child, it1, index)
                             break
         except:
-            raise Exception(f"loi o: {child}")
+            raise Exception(f"Exception at: {child}")
     return child
 def random_choice(population):
     size_random = int(math.sqrt(len(population)))
@@ -113,7 +113,6 @@ def reproduce(parent1, parent2):
         parent2[0: index] + parent1[index:]
     ]
     rd_index = random.randint(0, 1)
-    # print(arr)
     return fix(arr[rd_index])
 
 
