@@ -2,6 +2,21 @@ from abc import abstractmethod
 import math
 import random
 from func import *
+
+
+def unique(list1):
+    # initialize a null list
+    unique_list = []
+
+    # traverse for all elements
+    for x in list1:
+        # check if exists in unique_list or not
+        if x not in unique_list:
+            unique_list.append(x)
+    # print list
+    return unique_list
+
+
 class TSP:
     MAX = 200
     INF = 10000000000
@@ -25,15 +40,12 @@ class GA(TSP):
         super().__init__(n=kwargs["n"], points = kwargs["points"])
 
     def random_choice(self, population):
-        size_random = int(math.sqrt(len(population)))
+        size_random = int(len(population) / 2)
         while True:
-            try:
-                index1 = random.randint(0, size_random)
-                index2 = random.randint(0, size_random)
-                if population[index1] != population[index2]:
-                    return population[index1], population[index2]
-            except:
-                raise Exception(f"Exception at {index1}, {index2}")
+            index1 = random.randint(0, size_random)
+            index2 = random.randint(0, size_random)
+            if population[index1] != population[index2]:
+                return population[index1], population[index2]
 
     def check(self, child):
         check_arr = [0 for it in range(0, len(child))]
@@ -56,54 +68,50 @@ class GA(TSP):
             random.shuffle(unfill)
             for index in range(0, len(child)):
                 if check_arr[int(child[index])] > 1 and len(unfill) > 0:
+                    check_arr[int(child[index])] -= 1
                     new_child = child[0: index] + str(unfill[0])
                     if index + 1 < len(child):
                         child = new_child + child[index + 1:]
                     unfill.pop(0)
-                    check_arr[int(child[index])] -= 1
+
+        if not self.check(child):
+            raise Exception(f"Wrong {len(unfill)}, {child}")
         return child
 
     def reproduce(self, parent1, parent2):
         index = random.randint(1, len(parent1) - 1)
         arr = [
-            parent1[0: index] + parent2[index:],
-            parent2[0: index] + parent1[index:]
+            self.fix(parent1[0: index] + parent2[index:]),
+            self.fix(parent2[0: index] + parent1[index:]),
+            self.fix(parent1[index:] + parent2[0:index]),
+            self.fix(parent2[index:] + parent1[0:index])
         ]
-        rd_index = random.randint(0, 1)
-        return self.fix(arr[rd_index])
+        index1 = random.randint(1, len(parent1) - 1)
+        if index1 < index:
+            index, index1 = index1, index
+        a1 = [parent1[0:index], parent2[index: index1], parent2[index1:]]
+        a2 = [parent2[0:index], parent1[index:index1], parent1[index1:]]
+        for x in range(0, 3):
+            random.shuffle(a1)
+            random.shuffle(a2)
+            arr.append(self.fix(a1[0] + a1[1] + a1[2]))
+            arr.append(self.fix(a2[0] + a2[1] + a2[2]))
+
+        return arr
 
     def get_sorted_by_weigth(self, population, fit_func):
         population.sort(key=lambda x: fit_func(x))
         return population
 
-    def mutate(self, child):
+    def mutate(self, child):#fix this mutate
         index = random.randint(0, len(child) - 1)
         for it in range(0, len(child)):
             try:
                 if it != int(child[index]):
-                    a = 0
-                    b = 0
-                    current = 0
-                    try:
-                        if index - 1 >= 0:
-                            a = self.dis[int(child[index - 1])][it]
-                            current = self.dis[int(child[index - 1])][int(child[index])]
-
-                    except:
-                        raise IndexError("1")
-
-                    try:
-                        if index + 1 < len(child):
-                            b = self.dis[it][int(child[index + 1])]
-                            current += self.dis[int(child[index])][int(child[index + 1])]
-                    except:
-                        raise IndexError("2")
-
-                    if a + b < current:
-                        for it1 in range(0, len(child)):
-                            if child[it1] == str(it):
-                                child = swap_string(child, it1, index)
-                                break
+                    for it1 in range(0, len(child)):
+                        if child[it1] == str(it):
+                            child = swap_string(child, it1, index)
+                            break
             except:
                 raise Exception(f"Exception at: {child}")
         return child
@@ -115,25 +123,30 @@ class GA(TSP):
         while True:
             new_population = []
             t = schedule(loop_count)
-            if t < 0.0000000000001:
+            if t < 0.000001:
                 break
             sorted_population = self.get_sorted_by_weigth(population, fit_func)
             for i in range(0, len(population)):
-                parent1, parent2 = self.random_choice(sorted_population)
-                child = self.reproduce(parent1, parent2)
-                child = self.mutate(child)
-                new_population.append(child)
-            print(population)
-            print(new_population)
-            delt = self.get_min(population, fit_func) - self.get_min(new_population, fit_func)
+                parent1, parent2 = self.random_choice(sorted_population) #fix random choice
+                child_lst = self.reproduce(parent1, parent2)
+                for child in child_lst:
+                    child = self.mutate(child) #fix mutate
+                    new_population.append(child)
+                if len(new_population) > 10000:
+                    break
+            new_population = unique(new_population)
+            delt = max(-500, self.get_min(population, fit_func) - self.get_min(new_population, fit_func))
+
             if delt > 0:
                 population = new_population
             else:
-                print(delt, t)
-                if math.exp(-delt + 0.000001) - math.exp(t) > 0.00001:
+                # print(delt, t)
+                if math.exp(-delt / t) > 0.0000001:
                     population = new_population
                 else:
                     break
+            if len(population) == 1:
+                break
             loop_count += 1
         result_state = self.get_sorted_by_weigth(population, fit_func)[0]
         result = fit_func(result_state)

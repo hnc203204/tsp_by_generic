@@ -50,8 +50,9 @@ def solve(**kwargs):
         algo1 = BruteForce(n = n, points= points)
     except:
         raise Exception("Error at BF")
+    print(algo.solve(population=parent[0: min(len(parent), 10000)], fit_func=fit), algo1.solve(parent, fit_func=fit))
     return algo.solve(population=parent[0: min(len(parent), 100)], fit_func=fit)[1] == algo1.solve(parent, fit_func=fit)
-
+    # return 0
 
 
 if __name__ == "__main__":
@@ -60,7 +61,7 @@ if __name__ == "__main__":
     ]
     # create_test.create_test(number_of_test=len(lst), lst = lst)
     cnt = 0
-    for x in range(0, 8):
+    for x in range(0, len(lst)):
         cnt += solve(direction=f"test/test{x}.txt")
 
     print(cnt)
